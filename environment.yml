@@ -1,4 +1,4 @@
-name: nf-env
+name: nf-promotermap
 
 channels:
     - conda-forge
@@ -7,7 +7,21 @@ channels:
 dependencies:
     - python==3.12
     - pip
+    - bioconda::bedops
+    - bioconda::bowtie2
+    - bioconda::fastqc
+    - bioconda::minimap2
+    - bioconda::samtools
+    - bioconda::sra-tools
+    - conda-forge::git
+    - conda-forge::gnuplot
+    - conda-forge::libjpeg-turbo
+    - conda-forge::openjdk
     - conda-forge::openssl
     - conda-forge::unzip
     - pip:
-        - 'multiqc>=1.21'
+        - 'carabiner-tools[mpl,pd]>=0.0.4'
+        - 'cutadapt>=5.0'
+        - 'deeptools==3.5.3'
+        - 'multiqc>=1.27'
+        - 'numpy>=2.1.3'
