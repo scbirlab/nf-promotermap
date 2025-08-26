@@ -22,4 +22,4 @@ COPY environment.yml /tmp/environment.yml
 RUN micromamba create -n env -f /tmp/environment.yml && \
     micromamba clean --all --yes
 
-ENV PATH=$MAMBA_ROOT_PREFIX/envs/env/bin:$PATH
+ENV PATH=$PATH:$MAMBA_ROOT_PREFIX/envs/env/bin
