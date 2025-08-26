@@ -11,11 +11,12 @@ then
     docker_flag='-profile gh'
 else
     export SINGULARITY_FAKEROOT=1
-    docker_flag=''
+    docker_flag='-profile local -with-singularity'
 fi
 
 nextflow run "$script_dir"/.. \
     -resume $docker_flag \
-    --sample_sheet "$script_dir"/sample-sheet.csv \
+    -c "$script_dir"/nextflow.config \
+    --sample_sheet "$script_dir"/inputs/sample-sheet.csv \
     --inputs "$script_dir"/inputs \
     --outputs "$script_dir"/outputs
