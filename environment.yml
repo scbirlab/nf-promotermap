@@ -10,6 +10,7 @@ dependencies:
     - bioconda::bedops
     - bioconda::bowtie2
     - bioconda::fastqc
+    - bioconda::macs3
     - bioconda::minimap2
     - bioconda::perl-uri
     - bioconda::samtools
