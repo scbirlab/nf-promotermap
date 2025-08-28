@@ -16,14 +16,15 @@ process trim_using_cutadapt {
 
    input:
    tuple val( id ), path( reads, stageAs: "?/*" ), val( adapters5 ), val( adapters3 )
-   tuple val( trim_qual ), val( min_length )
+   val trim_qual 
+   val min_length
 
    output:
    tuple val( id ), path( "*.with-adapters.fastq.gz" ), emit: main
    tuple val( id ), path( "*.log" ), emit: logs
 
    script:
-   def adapter_3prime_R = (adapters3[1].length() > 0 ? "-A '${adapters3[1]}'" : "")
+   // def adapter_3prime_R = (adapters3[1].length() > 0 ? "-A '${adapters3[1]}'" : "")
    def adapter_5prime_R = (adapters5[1].length() > 0 ? "-G '${adapters5[1]}'" : "")
    def adapter_5prime_F = (adapters5[0].length() > 0 ? "-g '${adapters5[0]}'" : "")
    """
@@ -34,7 +35,7 @@ process trim_using_cutadapt {
 
    cutadapt \
 		-a "${adapters3[0]}" \
-      ${adapter_3prime_R} \
+      ${adapters3[1].length() > 0 ? "-A '${adapters3[1]}'" : ""} \
       --nextseq-trim ${trim_qual} \
       --minimum-length ${min_length} \
 		--report full \
@@ -42,7 +43,7 @@ process trim_using_cutadapt {
       -j ${task.cpus} \
 		-o ${id}_5p_R1.fastq.gz \
       -p ${id}_5p_R2.fastq.gz \
-		${id}_3p_R?.fastq.gz \
+		${id}_3p_R1.fastq.gz ${id}_3p_R2.fastq.gz \
    > ${id}.3p.cutadapt.log
 
    ADAPT5_ALL="${adapter_5prime_F}${adapter_5prime_R}"
@@ -50,7 +51,7 @@ process trim_using_cutadapt {
    if [ \$ADAPT5_LEN -gt 0 ]
    then
       cutadapt \
-         ${adapter_5prime_F} ${adapter_5prime_R} \
+         ${adapter_5prime_R} ${adapter_5prime_F} \
          --report full \
          --action trim \
          --discard-untrimmed \
@@ -58,7 +59,8 @@ process trim_using_cutadapt {
          -j ${task.cpus} \
          -o ${id}_R1.with-adapters.fastq.gz \
          -p ${id}_R2.with-adapters.fastq.gz \
-         ${id}_5p_R?.fastq.gz > ${id}.5p.cutadapt.log
+         ${id}_5p_R1.fastq.gz ${id}_5p_R2.fastq.gz \
+         > ${id}.5p.cutadapt.log
    else
       for i in \$(seq 1 2)
       do

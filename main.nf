@@ -51,6 +51,9 @@ if ( params.help ) {
 if ( !params.sample_sheet ) {
    throw new Exception("!!! PARAMETER MISSING: Please provide a path to sample_sheet")
 }
+if ( !params.control_label ) {
+   throw new Exception("!!! PARAMETER MISSING: Please provide a control label (--control_label)")
+}
 if ( !params.from_sra ) {
    if ( !params.fastq_dir ) {
       throw new Exception("!!! PARAMETER MISSING: Please provide a path to fastq_dir")
@@ -64,6 +67,7 @@ log.info """${pipeline_name}
             input dir.     : ${params.inputs}
             sample sheet   : ${params.sample_sheet}
             FASTQ dir.     : ${params.fastq_dir}
+            input sample   : ${params.control_label}
          trimming 
             quality        : ${params.trim_qual}
             minimum length : ${params.min_length}
@@ -81,7 +85,13 @@ include {
    bowtie2_index; 
    bowtie2_align;
 } from './modules/bowtie.nf'
+include { 
+   bam2wig;
+} from './modules/deeptools.nf'
 include { multiQC } from './modules/multiqc.nf'
+include { 
+   macs3 as MACS3_all_peaks;
+} from './modules/macs3.nf'
 include { 
    minimap_index; 
    minimap_align;
@@ -92,7 +102,7 @@ include {
 } from './modules/ncbi.nf'
 include { fastQC } from './modules/qc.nf'
 include { 
-   remove_multimappers;
+   sort_and_index_bam;
    plot_bamstats;
    SAMtools_stats;
    SAMtools_coverage;
@@ -117,12 +127,13 @@ workflow {
          tuple( it.adapter_read1_5prime, it.adapter_read2_5prime ),
          tuple( it.adapter_read1_3prime, it.adapter_read2_3prime ),
       ) }
-      .set { adapter_ch }  // sample_name, [adapt5], [adapt3]
+      .set { adapter_ch }  // sample_id, [adapt5], [adapt3]
 
    if ( params.from_sra ) {
       Channel.of( params.ncbi_api_key ).set { ncbi_api_key }
       csv_ch
          .map { tuple( it.sample_id, it.Run ) }
+         .unique()
          | fetch_FASTQ_from_SRA
          | set { reads_ch }  // sample_id, reads
    }
@@ -141,7 +152,28 @@ workflow {
 
    csv_ch
       .map { tuple( it.sample_id, it.genome_accession ) }
+      .unique()
       .set { genome_ch }  // sample_id, genome_acc
+
+   csv_ch
+      .map { tuple( it.sample_id, it.expt_id ) }
+      .unique()
+      .set { expt_ch }  // sample_id, expt_id
+
+   csv_ch
+      .map { tuple( it.sample_id, it.expt_id, it.bin_id ) }
+      .filter { it[2] == "${params.control_label}" }
+      .map { it[0..1] }
+      .unique()
+      .set { ctrl_ch }  // sample_id, expt_id
+
+   csv_ch
+      .map { tuple( it.sample_id, it.expt_id, it.bin_id ) }
+      .filter { it[2] != "${params.control_label}" }
+      .map { it[0..1] }
+      .unique()
+      .set { treat_ch }  // sample_id, expt_id
+   
 
    /*
    ========================================================================================
@@ -164,7 +196,8 @@ workflow {
 
    trim_using_cutadapt(
       reads_ch.combine( adapter_ch, by: 0 ),  // sample_id, [reads], [adapt5], [adapt3]
-      Channel.value( tuple( params.trim_qual, params.min_length ) )
+      Channel.value( params.trim_qual ),
+      Channel.value( params.min_length ),
    )  // sample_id, [reads]
    trim_using_cutadapt.out.main.set { trimmed }
    trim_using_cutadapt.out.logs.set { trim_logs }
@@ -226,13 +259,36 @@ workflow {
    }
 
    mapped_reads.main
-      | remove_multimappers
+      | sort_and_index_bam
       | (
          SAMtools_stats
          & SAMtools_coverage
          & SAMtools_flagstat
+         & bam2wig
       )
    SAMtools_stats.out | plot_bamstats
+
+   sort_and_index_bam.out
+      .combine( expt_ch, by: 0 )     // sample_id, bam_bai, expt_id
+      .map { tuple( it[0], it[-1], it[1] ) }  // sample_id, expt_id, bam_bai
+      .set { alignments }
+
+   alignments
+      .join( treat_ch, by: [0, 1] )  // sample_id, expt_id, bam_bai_ctrl
+      .set { treat_alignments }
+
+   alignments
+      .join( ctrl_ch, by: [0, 1] )  // sample_id, expt_id, bam_bai_ctrl
+      .set { ctrl_alignments }
+
+   treat_alignments
+      .map { tuple( it[1], it[2] ) }  // expt_id, bam_bai
+      .groupTuple( by: 0 )  // expt_id, [bam_bai, ..]
+      .combine(
+         ctrl_alignments.map { tuple( it[1], it[-1] ) },  // expt_id, bam_bai_ctrl
+         by: 0,
+      )  // expt_id, [bam_bai, ..], bam_bai_ctrl
+      | MACS3_all_peaks
 
    trim_logs
       .map { it[1] }

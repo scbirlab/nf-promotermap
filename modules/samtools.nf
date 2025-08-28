@@ -6,18 +6,17 @@ process SAMtools_stats {
     publishDir( 
         "${params.outputs}/samtools", 
         mode: 'copy',
-        saveAs: { "${id}.${it}" },
     )
 
     input:
     tuple val( id ), path( bamfile )
 
     output:
-    tuple val( id ), path( "stats.txt" )
+    tuple val( id ), path( "${id}.stats.txt" )
 
     script:
     """
-    samtools stats -@ ${task.cpus} "${bamfile[0]}" > stats.txt
+    samtools stats -@ ${task.cpus} "${bamfile}" > "${id}.stats.txt"
     """
 
 }
@@ -55,23 +54,22 @@ process SAMtools_flagstat {
     publishDir( 
         "${params.outputs}/samtools", 
         mode: 'copy',
-        saveAs: { "${id}.${it}" },
     )
 
     input:
     tuple val( id ), path( bamfile )
 
     output:
-    tuple val( id ), path( "flagstat.tsv" )
+    tuple val( id ), path( "${id}.flagstat.tsv" )
 
     script:
     """
-    #samtools collate -@ ${task.cpus} -O -u "${bamfile[0]}" \
+    #samtools collate -@ ${task.cpus} -O -u "${bamfile}" \
     #| samtools fixmate -@ ${task.cpus} -m -u - - \
     #| samtools sort -@ ${task.cpus} -m ${Math.round(task.memory.getGiga() * 0.8)}G -u - \
     #| samtools markdup -@ ${task.cpus} - markdup.bam
     #samtools flagstat -@ ${task.cpus} -O tsv markdup.bam > flagstat.tsv
-    samtools flagstat -@ ${task.cpus} -O tsv "${bamfile[0]}" > flagstat.tsv
+    samtools flagstat -@ ${task.cpus} -O tsv "${bamfile}" > "${id}.flagstat.tsv"
     """
 
 }
@@ -84,46 +82,44 @@ process SAMtools_coverage {
     publishDir( 
         "${params.outputs}/samtools", 
         mode: 'copy',
-        saveAs: { "${id}.${it}" },
     )
 
     input:
     tuple val( id ), path( bamfile )
 
     output:
-    tuple val( id ), path( "coverage.tsv" )
+    tuple val( id ), path( "${id}.coverage.tsv" )
 
     script:
     """
-    samtools coverage "${bamfile[0]}" -o coverage.tsv
+    samtools coverage "${bamfile}" -o "${id}.coverage.tsv"
     """
 
 }
 
-process remove_multimappers {
+process sort_and_index_bam {
 
     tag "${id}"
     label 'med_mem'
 
-    // publishDir( 
-    //     "${params.outputs}/samtools", 
-    //     mode: 'copy',
-    //     saveAs: { "${id}.${it}" },
-    // )
+    publishDir( 
+        "${params.outputs}/mapped", 
+        mode: 'copy',
+    )
 
     input:
     tuple val( id ), path( bamfile )
 
     output:
-    tuple val( id ), path( "sorted.{bam,bai}" )
+    tuple val( id ), path( "${id}.sorted.bam" )
 
     script:
     """
     # filter out multimappers
-    samtools view -@ ${task.cpus} -F260 -bS -q 3 "${bamfile}" -o filtered.bam
-    samtools sort -@ ${task.cpus} -m ${Math.round(task.memory.getGiga() * 0.8)}G filtered.bam -o sorted.bam
-    samtools index sorted.bam
-    rm filtered.bam
+    #samtools view -@ ${task.cpus} -F260 -bS -q 3 "${bamfile}" -o filtered.bam
+    samtools sort -@ ${task.cpus} -m ${Math.round(task.memory.getGiga() * 0.8)}G "${bamfile}" -o "${id}.sorted.bam"
+    #samtools index -@ ${task.cpus} "${id}.sorted.bam" -o "${id}.sorted.bai"
+    #rm filtered.bam
     """
 
 }

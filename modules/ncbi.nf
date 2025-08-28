@@ -3,6 +3,12 @@ process fetch_genome_from_NCBI {
    tag "${accession}"
    label 'some_mem'
 
+   publishDir( 
+        "${params.outputs}/genome", 
+        mode: 'copy',
+        saveAs: { "${id}.${it}" },
+    )
+
    input:
    val accession
 
