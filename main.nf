@@ -24,18 +24,24 @@ def pipeline_name = """\
 
 if ( params.help ) {
    println """${pipeline_name}
-         Nextflow pipeline to ....
+         Nextflow pipeline to map Illumina sequences to bacterial genomes and call peaks.
 
          Usage:
-            nextflow run scbirlab/nf-promotermap --sample_sheet <csv> --inputs <dir>
+            nextflow run scbirlab/nf-promotermap --sample_sheet <csv> --fastq_dir <dir> --control_label <text> [--inputs <dir> --mapper (bowtie2|minimap2)]
             nextflow run scbirlab/nf-promotermap -c <config-file>
 
          Required parameters:
             sample_sheet      Path to a CSV with information about the samples 
                                  to be processed
+            fastq_dir         Path to where FASTQ files are stored
+            control_label     The bin ID of background controls
 
          Optional parameters (with defaults):  
-            inputs             Directory containing inputs. Default: "./inputs".
+            inputs            Directory containing inputs. Default: "./inputs".
+            outputs           Directory to contain outputs. Default: "./outputs".
+            trim_qual         Minimum base-call quality for trimming. Default: 5.
+            min_length        Discard reads shorter than this number of bases after trimming. Default: 9.
+            mapper            Alignment tool. Default: "bowtie2"
 
          The parameters can be provided either in the `nextflow.config` file or on the `nextflow run` command.
    
