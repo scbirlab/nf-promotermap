@@ -43,7 +43,7 @@ process macs3 {
             --bdg \
             --trackline \
             --gsize 4000000 \
-            --buffer-size ${Math.round(task.memory.getBytes() * 0.8)}
+            --buffer-size ${Math.round(task.memory.toMega() * 0.8 / 800)}
     done
 
     for f in macs3/*.xls
