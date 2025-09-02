@@ -6,9 +6,7 @@
 [![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 
-**scbirlab/nf-promotermap** is a Nextflow pipeline template.
-
-Use it to scaffold a new pipeline project.
+**scbirlab/nf-promotermap** maps Illumina sequences to bacterial genomes and calls peaks.
 
 **Table of contents**
 
@@ -22,6 +20,27 @@ Use it to scaffold a new pipeline project.
 
 ## Processing steps
 
+The pipeline carries out the following steps, given a [sample sheet (see below)](#sample-sheet):
+
+1. Downloads reference genome and annotations from NCBI
+2. Trims adapter sequences from Illumina reads using `cutadapt`
+3. Aligns to reference genome using either `bowtie2` or `minimap2`
+4. Call peaks across all samples with `MACS3`.
+
+### Work in progress
+
+1. Annotate peaks with nearest genes.
+2. Generate FASTA of peak sequences.
+3. Calculate coverage of each peak for each sample and variance across samples.
+4. Calculate per-base coverage within each peak for each sample and mean and variance across samples.
+5. Identify elements associated with strength and variance.
+6. Identify common sequence motifs in those elements. 
+
+### Other steps
+
+1. Get FASTQ quality metrics with `fastqc`.
+2. Calculate coverage and other with `samtools`.  
+3. Compile the logs of processing steps into an HTML report with `multiqc`.
 
 ## Requirements
 
@@ -29,13 +48,15 @@ Use it to scaffold a new pipeline project.
 
 You need to have Nextflow and either Anaconda, Singularity, or Docker installed on your system.
 
-#### First time using Nextflow?
+#### Crick users (and other HPC users)
 
 If you're at the Crick or your shared cluster has it already installed, try:
 
 ```bash
 module load Nextflow Singularity
 ```
+
+#### Everyone else: installing Nextflow 
 
 Otherwise, if it's your first time using Nextflow on your system and you have Conda installed, you can install it using `conda`:
 
@@ -65,19 +86,11 @@ a [`nextflow.config` file](#inputs) in the directory where you want the
 pipeline to run. Then run Nextflow.
 
 ```bash 
-nextflow run scbirlab/nf-promotermap
-```
-
-Each time you run the pipeline after the first time, Nextflow will use a 
-locally-cached version which will not be automatically updated. If you want 
-to ensure that you're using the very latest version of the pipeline, use 
-the `-latest` flag.
-
-```bash 
 nextflow run scbirlab/nf-promotermap -latest
 ```
 
-If you want to run a particular tagged version of the pipeline, such as `v0.0.1`, you can do so using
+If you want to run a particular tagged version of the pipeline, such as `v0.0.1`, 
+you can do so using
 
 ```bash 
 nextflow run scbirlab/nf-promotermap -r v0.0.1
@@ -85,7 +98,7 @@ nextflow run scbirlab/nf-promotermap -r v0.0.1
 
 For help, use `nextflow run scbirlab/nf-promotermap --help`.
 
-The first time you run the pipeline for a project, the software dependencies 
+The first time you run the pipeline, the software dependencies 
 in `environment.yml` will be installed. This may take several minutes.
 
 ## Inputs
@@ -93,6 +106,8 @@ in `environment.yml` will be installed. This may take several minutes.
 The following parameters are required:
 
 - `sample_sheet`: path to a CSV with information about the samples and FASTQ files to be processed
+- `fastq_dir`: path to where FASTQ files are stored
+- `control_label`: the bin ID (from [sample sheet](#sample-sheet)) of background controls
 
 The following parameters have default values which can be overridden if necessary.
 
@@ -107,6 +122,8 @@ Here is an example of the `nextflow.config` file:
 params {
     sample_sheet = "/path/to/sample-sheet.csv"
     inputs = "/path/to/inputs"
+    fastq_dir = "/path/to/fastq"
+    control_label =  "U" // bin_id of your background control" 
 }
 ```
 
@@ -122,22 +139,43 @@ nextflow run scbirlab/nf-promotermap \
 
 The sample sheet is a CSV file providing information about which FASTQ files belong to which sample.
 
-The file must have a header with the column names below, and one line per sample to be processed.
+The file must have a header with the column names below (in any order), and one line per sample to be processed. 
+You can have additional columns eith extra information if you like.
 
-- `sample_id`: the unique name of the sample. 
+- `expt_id`: Unique name of a peak-calling experiment. Peaks will be called across all samples with the same experiment ID.
+- `sample_id`: Unique name of the sample within an experiment. FASTQ files under the same sample ID will be combined.
+- `bin_id`:  Unique name of a bin within an experiment. Sample IDs under the same bin will be pooled before coverage analysis.
+- `fastq_pattern`: Partial filename that matches at least both R1 and R2 FASTQ files for a sample.
+- `genome_accession`: The [NCBI assembly accession](https://www.ncbi.nlm.nih.gov/datasets/genome/) number for the genome for alignment and annotation. This number starts with "GCF_" or "GCA_".
+- `adapter_read1_3prime`: the 3' adapter on the forward read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
+- `adapter_read2_3prime`:  the 3' adapter on the reverse read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
+- `adapter_read1_5prime`: the 5' adapter on the forward read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences _upstream_ will be removed.
+- `adapter_read2_5prime`:  the 5' adapter on the reverse read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences _upstream_ will be removed.
 
 Here is an example of the sample sheet:
 
-| sample_id | 
-| --------- |
-| sample01  |
-| sample02  |
+| expt_id | sample_id   | bin_id | fastq_pattern | genome_accession | adapter_read1_3prime  | adapter_read2_3prime | adapter_read1_5prime | adapter_read2_5prime | 
+| ------- | ----------- | ------ | ------------- | ---------------- | --------------------- | -------------------- | -------------------- | -------------------- |
+| expt-01 | 01-Unsorted | U      | G5512A22_R    | GCF_904425475.1  | ATTAACCTCCTAATCGTGCGT | CTACCGCCTTGCTGCTGCGT | ACGCAGCAGCAAGGCGG    | ACGCACGATTAGGA       |
+| expt-01 | 01-Red1     | Red1   | G5512A23_R    | GCF_904425475.1  | ATTAACCTCCTAATCGTGCGT | CTACCGCCTTGCTGCTGCGT | ACGCAGCAGCAAGGCGG    | ACGCACGATTAGGA       |
+
+
+### Example inputs
+
+You cna find some examples in the `test` directory of this repository.
 
 ## Outputs
 
-Outputs are saved in the directory specified by `--outputs` (`outputs` by default). They are organised these directories:
+Outputs are saved in the directory specified by `--outputs` (`outputs` by default). 
+They are organised into these directories:
 
+- `bigwig`: Coverage bigwig files
+- `genome`: Reference genomes and annotations
+- `mapped`: BAM files of mapped Illumina reads
 - `multiqc`: HTML reports from the outputs of intermediate steps
+- `peaks`: peak calls
+- `samtools`: Coverage and other metrics
+- `trimmed`: Trimming logs and FASTQ files.
 
 ## Issues, problems, suggestions
 
@@ -148,5 +186,11 @@ If you run into problems not covered here, add to the
 
 Here are the help pages of the software used by this pipeline.
 
-- [multiqc](https://multiqc.info/)
-- [nextflow](https://www.nextflow.io/docs/latest/index.html)
+- [bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml)
+- [cutadapt](https://cutadapt.readthedocs.io/en/stable/index.html)
+- [fastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
+- [MACS3](https://macs3-project.github.io/MACS/index.html)
+- [minimap2](https://lh3.github.io/minimap2/minimap2.html)
+- [multiQC](https://multiqc.info/)
+- [Nextflow](https://www.nextflow.io/docs/latest/index.html)
+- [samtools](http://www.htslib.org/doc/samtools.html)
