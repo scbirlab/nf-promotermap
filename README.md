@@ -1,4 +1,4 @@
-# Nextflow pipeline template
+# scbirlab/nf-promotermap
 
 ![GitHub Workflow Status (with branch)](https://img.shields.io/github/actions/workflow/status/scbirlab/nf-promotermap/nf-test.yml)
 [![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A523.10.0-23aa62.svg)](https://www.nextflow.io/)
