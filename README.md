@@ -123,7 +123,7 @@ params {
     sample_sheet = "/path/to/sample-sheet.csv"
     inputs = "/path/to/inputs"
     fastq_dir = "/path/to/fastq"
-    control_label =  "U" // bin_id of your background control" 
+    control_label = "U" // bin_id of your background control" 
 }
 ```
 
@@ -132,7 +132,9 @@ Alternatively, you can provide the parameters on the command line:
 ```bash
 nextflow run scbirlab/nf-promotermap \
     --sample_sheet /path/to/sample-sheet.csv \
-    --inputs /path/to/inputs
+    --inputs /path/to/inputs \
+    --fastq_dir /path/to/fastq \
+    --control_label U
 ``` 
 
 ### Sample sheet
@@ -145,7 +147,7 @@ You can have additional columns eith extra information if you like.
 - `expt_id`: Unique name of a peak-calling experiment. Peaks will be called across all samples with the same experiment ID.
 - `sample_id`: Unique name of the sample within an experiment. FASTQ files under the same sample ID will be combined.
 - `bin_id`:  Unique name of a bin within an experiment. Sample IDs under the same bin will be pooled before coverage analysis.
-- `fastq_pattern`: Partial filename that matches at least both R1 and R2 FASTQ files for a sample.
+- `fastq_pattern`: Partial filename that matches at least both R1 and R2 FASTQ files for a sample in the `fastq_dir` ([defined above](#inputs)).
 - `genome_accession`: The [NCBI assembly accession](https://www.ncbi.nlm.nih.gov/datasets/genome/) number for the genome for alignment and annotation. This number starts with "GCF_" or "GCA_".
 - `adapter_read1_3prime`: the 3' adapter on the forward read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
 - `adapter_read2_3prime`:  the 3' adapter on the reverse read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
