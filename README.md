@@ -113,9 +113,9 @@ The following parameters have default values which can be overridden if necessar
 
 - `inputs = "inputs"` : The folder containing your inputs.
 - `outputs = "outputs"` : The folder to containing the pipeline outputs.
-- `trim_qual = 5`: Minimum base-call quality for trimming. Default: 5.
-- `min_length = 9`: Discard reads shorter than this number of bases after trimming. Default: 9.
-- `mapper = "bowtie2"`: Alignment tool. Default: "bowtie2"
+- `trim_qual = 5`: Minimum base-call quality for trimming.
+- `min_length = 9`: Discard reads shorter than this number of bases after trimming.
+- `mapper = "bowtie2"`: Alignment tool.
 
 The parameters can be provided either in the `nextflow.config` file or on the `nextflow run` command.
 
