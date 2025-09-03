@@ -91,11 +91,11 @@ pipeline to run. Then run Nextflow.
 nextflow run scbirlab/nf-promotermap -latest
 ```
 
-If you want to run a particular tagged version of the pipeline, such as `v0.0.1`, 
+If you want to run a particular tagged version of the pipeline, such as `v0.0.2`, 
 you can do so using
 
 ```bash 
-nextflow run scbirlab/nf-promotermap -r v0.0.1
+nextflow run scbirlab/nf-promotermap -r v0.0.2
 ```
 
 For help, use `nextflow run scbirlab/nf-promotermap --help`.
@@ -180,6 +180,7 @@ Outputs are saved in the directory specified by `--outputs` (`outputs` by defaul
 They are organised into these directories:
 
 - `bigwig`: Coverage bigwig files
+- `coverage`: Coverage of peaks per bin
 - `genome`: Reference genomes and annotations
 - `mapped`: BAM files of mapped Illumina reads
 - `multiqc`: HTML reports from the outputs of intermediate steps
