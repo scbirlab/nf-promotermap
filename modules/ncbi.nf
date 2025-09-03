@@ -1,6 +1,6 @@
 process fetch_genome_from_NCBI {
 
-   tag "${accession}"
+   tag "${id}"
    label 'some_mem'
 
    publishDir( 
@@ -10,15 +10,15 @@ process fetch_genome_from_NCBI {
     )
 
    input:
-   val accession
+   val id
 
    output:
-   tuple val( accession ), path( "all-nucleotides.fna" ), path( "all-annotations.gff" )
+   tuple val( id ), path( "all-nucleotides.fna" ), path( "all-annotations.gff" )
 
    script:
    """
    set -euox pipefail
-   ACCESSIONS=\$(echo "${accession}" | tr '+' ' ')
+   ACCESSIONS=\$(echo "${id}" | tr '+' ' ')
    echo "\$ACCESSIONS"
    WEB_ROOT="https://api.ncbi.nlm.nih.gov/datasets/v2alpha/genome/accession"
    WEB_TAIL="download?include_annotation_type=GENOME_FASTA&include_annotation_type=GENOME_GFF&hydrated=FULLY_HYDRATED"
@@ -40,17 +40,17 @@ process fetch_genome_from_NCBI {
 // Get FASTQ
 process fetch_FASTQ_from_SRA {
 
-   tag "${sample_id}-${sra_run_id}" 
+   tag "${id}-${sra_run_id}" 
 
    label 'big_mem'
    time '24 h'
 
    input:
-   tuple val( sample_id ), val( sra_run_id )
+   tuple val( id ), val( sra_run_id )
    secret 'NCBI_API_KEY'
 
    output:
-   tuple val( sample_id ), path( "*.with-idx_R?.fastq.gz" )
+   tuple val( id ), path( "*.with-idx_R?.fastq.gz" )
 
    script:
    """
