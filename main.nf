@@ -88,13 +88,20 @@ log.info """${pipeline_name}
 ========================================================================================
 */
 include { 
+   annotate_nearest_gene;
+   extract_peak_sequences;
+   get_peak_coverage;
+   gff2bed;
+   make_peak_summary_table;
+} from './modules/bedtools.nf'
+include { 
    bowtie2_index; 
    bowtie2_align;
 } from './modules/bowtie.nf'
 include { 
    bam2wig;
+   plot_peaks;
 } from './modules/deeptools.nf'
-include { multiQC } from './modules/multiqc.nf'
 include { 
    macs3 as MACS3_all_peaks;
 } from './modules/macs3.nf'
@@ -102,6 +109,7 @@ include {
    minimap_index; 
    minimap_align;
 } from './modules/minimap.nf'
+include { multiQC } from './modules/multiqc.nf'
 include { 
    fetch_genome_from_NCBI; 
    fetch_FASTQ_from_SRA;
@@ -274,16 +282,34 @@ workflow {
       )
    SAMtools_stats.out | plot_bamstats
 
+   fetch_genome_from_NCBI.out  // genome_acc, genome, gff
+      .map { tuple( it[0], it[2] ) }  // genome_acc, gff
+      | gff2bed
+
+   gff2bed.out
+      .combine( 
+         genome_ch.map { it[1..0] }, 
+         by: 0,
+      )  // genome_acc, bed, sample_id
+      .map { it[-1..1] }  // sample_id, bed
+      .combine( treat_ch, by: 0 )  // sample_id, bed, expt_id
+      .map { it[-1..1] }  // expt_id, bed
+      .unique()
+      .set { expt2gffbed }
+
    sort_and_index_bam.out
-      .combine( expt_ch, by: 0 )     // sample_id, bam_bai, expt_id
-      .map { tuple( it[0], it[-1], it[1] ) }  // sample_id, expt_id, bam_bai
+      .combine( bam2wig.out, by: 0 )
+      .combine( expt_ch, by: 0 )     // sample_id, bam_bai, bw, expt_id
+      .map { tuple( it[0], it[-1], it[1], it[2] ) }  // sample_id, expt_id, bam_bai, bw
       .set { alignments }
 
    alignments
-      .join( treat_ch, by: [0, 1] )  // sample_id, expt_id, bam_bai_ctrl
+      .map { it[0..-2] }
+      .join( treat_ch, by: [0, 1] )  // sample_id, expt_id, bam_bai_treat
       .set { treat_alignments }
 
    alignments
+      .map { it[0..-2] }
       .join( ctrl_ch, by: [0, 1] )  // sample_id, expt_id, bam_bai_ctrl
       .set { ctrl_alignments }
 
@@ -294,7 +320,53 @@ workflow {
          ctrl_alignments.map { tuple( it[1], it[-1] ) },  // expt_id, bam_bai_ctrl
          by: 0,
       )  // expt_id, [bam_bai, ..], bam_bai_ctrl
-      | MACS3_all_peaks
+      .set { expt2bams }
+   expt2bams | MACS3_all_peaks
+
+   alignments
+      .map { tuple( it[1], it[3] ) } // expt_id, bw
+      .groupTuple( by: 0 )  // expt_id, [bw, ..]
+      .set { expt2bigwig }
+   expt2bigwig
+      .combine( expt2gffbed, by: 0 ) 
+      | plot_peaks
+
+   MACS3_all_peaks.out.peaks  // expt_id, bed
+      .combine(
+         expt2bams.map { it[0..1] },
+         by: 0,
+      )
+      | get_peak_coverage
+   
+   MACS3_all_peaks.out.summits  // expt_id, bed
+      .combine( 
+         expt2gffbed,
+         by: 0 
+      )  // expt_id, bed, gff
+      | annotate_nearest_gene
+
+   MACS3_all_peaks.out.peaks  // expt_id, bed
+      .combine( 
+         fetch_genome_from_NCBI.out  // genome_acc, genome, gff
+            .map { tuple( it[0], it[1] ) }  // genome_acc, genome
+            .combine( 
+               genome_ch.map { it[1..0] }, 
+               by: 0,
+            )  // genome_acc, genome, sample_id
+            .map { it[-1..1] }  // sample_id, genome
+            .combine( treat_ch, by: 0 )  // sample_id, genome, expt_id
+            .map { it[-1..1] }  // expt_id, genome
+            .unique(),
+         by: 0,
+      )  // expt_id, bed, genome
+      | extract_peak_sequences
+
+   annotate_nearest_gene.out
+      .combine(
+         extract_peak_sequences.out.tsv,
+         by: 0,
+      )
+      | make_peak_summary_table
 
    trim_logs
       .map { it[1] }
