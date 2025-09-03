@@ -64,7 +64,7 @@ process plot_peaks {
         --verbose \
         --matrixFile matrix.mat.gz \
         --dpi 300 \
-        --colorMap Greens \
+        --colorMap magma \
         --refPointLabel "Gene start" \
         --outFileName peak-heatmap.png
     
