@@ -125,7 +125,7 @@ process get_peak_coverage {
     done
 
     bedtools multicov -p -bams ${bams} -bed ${peaks} > peak-cov.bed
-    printf 'chr\\tpeak_start\\tpeak_end\\tpeak_name\\t${bams.join('\\t')}\\n' > peak-cov.tsv
+    printf 'chr\\tpeak_start\\tpeak_end\\tpeak_name\\tscore\\tstrand\\t${bams.join('\\t')}\\n' > peak-cov.tsv
     cat peak-cov.bed >> peak-cov.tsv
 
     """
