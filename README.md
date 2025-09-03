@@ -25,16 +25,18 @@ The pipeline carries out the following steps, given a [sample sheet (see below)]
 1. Downloads reference genome and annotations from NCBI
 2. Trims adapter sequences from Illumina reads using `cutadapt`
 3. Aligns to reference genome using either `bowtie2` or `minimap2`
-4. Call peaks across all samples with `MACS3`.
+4. Plot gene start coverage with `deeptools`.
+5. Call peaks across all samples with `MACS3`.
+6. Annotate peaks with nearest genes.
+7. Generate FASTA of peak sequences.
+8. Calculate coverage of each peak for each bin.
 
 ### Work in progress
 
-1. Annotate peaks with nearest genes.
-2. Generate FASTA of peak sequences.
-3. Calculate coverage of each peak for each sample and variance across samples.
-4. Calculate per-base coverage within each peak for each sample and mean and variance across samples.
-5. Identify elements associated with strength and variance.
-6. Identify common sequence motifs in those elements. 
+- [ ] Calculate coverage variance across bins.
+- [ ] Calculate per-base coverage within each peak for each bins and mean and variance across bins.
+- [ ] Identify elements associated with strength and variance.
+- [ ] Identify common sequence motifs in those elements. 
 
 ### Other steps
 
@@ -155,10 +157,10 @@ You can have additional columns eith extra information if you like.
 - `bin_id`:  Unique name of a bin within an experiment. Sample IDs under the same bin will be pooled before coverage analysis.
 - `fastq_pattern`: Partial filename that matches at least both R1 and R2 FASTQ files for a sample in the `fastq_dir` ([defined above](#inputs)).
 - `genome_accession`: The [NCBI assembly accession](https://www.ncbi.nlm.nih.gov/datasets/genome/) number for the genome for alignment and annotation. This number starts with "GCF_" or "GCA_".
-- `adapter_read1_3prime`: the 3' adapter on the forward read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
-- `adapter_read2_3prime`:  the 3' adapter on the reverse read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
-- `adapter_read1_5prime`: the 5' adapter on the forward read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences _upstream_ will be removed.
-- `adapter_read2_5prime`:  the 5' adapter on the reverse read to trim to in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences _upstream_ will be removed.
+- `adapter_read1_3prime`: the 3' adapter on the forward read to trim in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
+- `adapter_read2_3prime`:  the 3' adapter on the reverse read to trim in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
+- `adapter_read1_5prime`: the 5' adapter on the forward read to trim in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences _upstream_ will be removed.
+- `adapter_read2_5prime`:  the 5' adapter on the reverse read to trim in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences _upstream_ will be removed.
 
 Here is an example of the sample sheet:
 
@@ -194,8 +196,10 @@ If you run into problems not covered here, add to the
 
 Here are the help pages of the software used by this pipeline.
 
+- [BEDtools](https://bedtools.readthedocs.io/en/latest/index.html)
 - [bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml)
 - [cutadapt](https://cutadapt.readthedocs.io/en/stable/index.html)
+- [deeptools](https://deeptools.readthedocs.io/en/develop/index.html)
 - [fastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 - [MACS3](https://macs3-project.github.io/MACS/index.html)
 - [minimap2](https://lh3.github.io/minimap2/minimap2.html)
