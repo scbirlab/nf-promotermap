@@ -121,10 +121,13 @@ include {
    SAMtools_stats;
    SAMtools_coverage;
    SAMtools_flagstat;
- } from './modules/samtools.nf'
- include { 
+} from './modules/samtools.nf'
+include { 
    trim_using_cutadapt; 
 } from './modules/trimming.nf'
+include { 
+   get_peak_variance; 
+} from './modules/variance.nf'
 
 workflow {
 
@@ -337,6 +340,9 @@ workflow {
          by: 0,
       )
       | get_peak_coverage
+
+   get_peak_coverage.out.tsv
+      | get_peak_variance
    
    MACS3_all_peaks.out.summits  // expt_id, bed
       .combine( 
@@ -364,6 +370,10 @@ workflow {
    annotate_nearest_gene.out
       .combine(
          extract_peak_sequences.out.tsv,
+         by: 0,
+      )
+      .combine(
+         get_peak_coverage.out.tsv,
          by: 0,
       )
       | make_peak_summary_table

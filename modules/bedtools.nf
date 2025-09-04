@@ -143,7 +143,7 @@ process make_peak_summary_table {
     )
 
     input:
-    tuple val( id ), path( summits ), path( peaks )
+    tuple val( id ), path( summits ), path( peaks ), path( coverage )
 
     output:
     tuple val( id ), path( "peak-summary.tsv" )
@@ -156,6 +156,10 @@ process make_peak_summary_table {
 
     (
         pd.read_csv("${summits}", sep="\\t")
+        .merge(
+            pd.read_csv("${coverage}", sep="\\t"),
+            how="left",
+        )
         .merge(
             pd.read_csv("${peaks}", sep="\\t"),
             how="left",
