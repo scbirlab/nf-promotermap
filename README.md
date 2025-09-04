@@ -30,10 +30,10 @@ The pipeline carries out the following steps, given a [sample sheet (see below)]
 6. Annotate peaks with nearest genes.
 7. Generate FASTA of peak sequences.
 8. Calculate coverage of each peak for each bin.
+9. Calculate coverage variance across bins.
 
 ### Work in progress
 
-- [ ] Calculate coverage variance across bins.
 - [ ] Calculate per-base coverage within each peak for each bins and mean and variance across bins.
 - [ ] Identify elements associated with strength and variance.
 - [ ] Identify common sequence motifs in those elements. 
