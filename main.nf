@@ -91,6 +91,7 @@ include {
    annotate_nearest_gene;
    extract_peak_sequences;
    get_peak_coverage;
+   get_per_base_coverage_within_peaks;
    gff2bed;
    make_peak_summary_table;
 } from './modules/bedtools.nf'
@@ -339,7 +340,10 @@ workflow {
          expt2bams.map { it[0..1] },
          by: 0,
       )
-      | get_peak_coverage
+      | (
+         get_peak_coverage
+         & get_per_base_coverage_within_peaks
+      )
 
    get_peak_coverage.out.tsv
       | get_peak_variance

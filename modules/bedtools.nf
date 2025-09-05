@@ -125,8 +125,88 @@ process get_peak_coverage {
     done
 
     bedtools multicov -p -bams ${bams} -bed ${peaks} > peak-cov.bed
-    printf 'chr\\tpeak_start\\tpeak_end\\tpeak_name\\tscore\\tstrand\\t${bams.join('\\t')}\\n' > peak-cov.tsv
+    printf 'chr\\tpeak_start\\tpeak_end\\tpeak_name\\tpeak_score\\tpeak_strand\\t${bams.join('\\t')}\\n' > peak-cov.tsv
     cat peak-cov.bed >> peak-cov.tsv
+
+    """
+}
+
+
+process get_per_base_coverage_within_peaks {
+
+    tag "${id}"
+
+    publishDir( 
+        "${params.outputs}/peaks", 
+        mode: 'copy',
+        saveAs: { "${id}.${it}" },
+    )
+
+    input:
+    tuple val( id ), path( peaks ), path( bams )
+
+    output:
+    tuple val( id ), path( "coverage.tsv" ), emit: counts
+    tuple val( id ), path( "coverage-norm.tsv" ), emit: normalized
+
+    script:
+    """
+    for f in ${bams}
+    do
+        bedfile=\$(basename "\$f" .bam).fragments.bed
+        covfile=\$(basename "\$f" .bam).coverage.tsv
+        samtools sort -N -@ ${task.cpus} -m ${Math.round(task.memory.getGiga() * 0.8)}G "\$f" \
+        | samtools view -bf 0x2 - \
+        | bedtools bamtobed -bedpe -i stdin \
+        | awk -v OFS='\\t' '
+            { print \$1, \$2, \$6, \$7, \$8, \$9; next }
+        ' \
+        | sort -k1,1 -k2,2n \
+        > "\$bedfile"
+        printf 'chr\\tpeak_start\\tpeak_end\\tpeak_name\\tpeak_score\\tpeak_strand\\tpeak_coordinate\\t'"\$(basename "\$f" .sorted.bam)"'\\n' > "\$covfile"
+        bedtools coverage -sorted -s -d -a ${peaks} -b "\$bedfile" >> "\$covfile"
+    done
+
+    #covfiles=(*.coverage.tsv)
+    #head -n1 "\${covfiles[0]}" \
+    #| cat - <(tail -n+2 -q "\${covfiles[@]}") \
+    #> "coverage.tsv"
+    #exit 1
+
+    python -c '
+    from glob import glob
+    
+    import numpy as np
+    import pandas as pd
+    from scipy.special import xlogy
+
+    def entropy(df):
+        normed = df_rpkm.values / df.values.sum(axis=1, keepdims=True)
+        return -np.nansum(xlogy(normed, normed), axis=1)
+
+    files = sorted(glob("*.coverage.tsv"))
+    df = pd.read_csv(files[0], sep="\\t")
+    for f in files[1:]:
+        df = df.merge(pd.read_csv(f, sep="\\t"), how="outer")
+    df.fillna(0.).to_csv("coverage.tsv", sep="\\t", index=False)
+
+    df = df.set_index(df.columns[:7].tolist())
+    peak_size_kb = np.abs(df.index.get_level_values("peak_start").values - df.index.get_level_values("peak_end").values) / 1000.
+    df_rpkm = df.values / (peak_size_kb[:,None] * df.sum(axis=0).values[None,:] / 1_000_000.)
+    df_rpkm = pd.DataFrame(df_rpkm, index=df.index, columns=df.columns)
+
+    df2 = (
+        df_rpkm
+        .assign(
+            base_sum=df_rpkm.sum(axis=1),
+            base_var=df_rpkm.var(axis=1),
+            base_entropy=entropy(df_rpkm),
+            base_max=df_rpkm.idxmax(axis="columns"),
+        )
+    )
+    df2.to_csv("coverage-norm.tsv", sep="\\t")
+    
+    '
 
     """
 }
