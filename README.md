@@ -30,11 +30,11 @@ The pipeline carries out the following steps, given a [sample sheet (see below)]
 6. Annotate peaks with nearest genes.
 7. Generate FASTA of peak sequences.
 8. Calculate coverage of each peak for each bin.
+9. Calculate coverage variance across bins.
+10. Calculate per-base coverage within each peak for each bins and mean and variance across bins.
 
 ### Work in progress
 
-- [ ] Calculate coverage variance across bins.
-- [ ] Calculate per-base coverage within each peak for each bins and mean and variance across bins.
 - [ ] Identify elements associated with strength and variance.
 - [ ] Identify common sequence motifs in those elements. 
 
@@ -91,11 +91,11 @@ pipeline to run. Then run Nextflow.
 nextflow run scbirlab/nf-promotermap -latest
 ```
 
-If you want to run a particular tagged version of the pipeline, such as `v0.0.2`, 
+If you want to run a particular tagged version of the pipeline, such as `v0.0.3`, 
 you can do so using
 
 ```bash 
-nextflow run scbirlab/nf-promotermap -r v0.0.2
+nextflow run scbirlab/nf-promotermap -r v0.0.3
 ```
 
 For help, use `nextflow run scbirlab/nf-promotermap --help`.
@@ -157,10 +157,10 @@ You can have additional columns eith extra information if you like.
 - `bin_id`:  Unique name of a bin within an experiment. Sample IDs under the same bin will be pooled before coverage analysis.
 - `fastq_pattern`: Partial filename that matches at least both R1 and R2 FASTQ files for a sample in the `fastq_dir` ([defined above](#inputs)).
 - `genome_accession`: The [NCBI assembly accession](https://www.ncbi.nlm.nih.gov/datasets/genome/) number for the genome for alignment and annotation. This number starts with "GCF_" or "GCA_".
-- `adapter_read1_3prime`: the 3' adapter on the forward read to trim in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
-- `adapter_read2_3prime`:  the 3' adapter on the reverse read to trim in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences downstream will be removed.
-- `adapter_read1_5prime`: the 5' adapter on the forward read to trim in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences _upstream_ will be removed.
-- `adapter_read2_5prime`:  the 5' adapter on the reverse read to trim in [`cutadapt` format](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences). The adapter itself and sequences _upstream_ will be removed.
+- `adapter_read1_3prime`: [the 3' adapter on the forward read to trim](#cutadapt-format). The adapter itself and sequences _downstream_ will be removed.
+- `adapter_read2_3prime`: [the 3' adapter on the reverse read to trim](#cutadapt-format). The adapter itself and sequences _downstream_ will be removed.
+- `adapter_read1_5prime`: [the 5' adapter on the forward read to trim](#cutadapt-format). The adapter itself and sequences _upstream_ will be removed.
+- `adapter_read2_5prime`: [the 5' adapter on the reverse read to trim](#cutadapt-format). The adapter itself and sequences _upstream_ will be removed.
 
 Here is an example of the sample sheet:
 
@@ -169,6 +169,10 @@ Here is an example of the sample sheet:
 | expt-01 | 01-Unsorted | U      | G5512A22_R    | GCF_904425475.1  | ATTAACCTCCTAATCGTGCGT | CTACCGCCTTGCTGCTGCGT | ACGCAGCAGCAAGGCGG    | ACGCACGATTAGGA       |
 | expt-01 | 01-Red1     | Red1   | G5512A23_R    | GCF_904425475.1  | ATTAACCTCCTAATCGTGCGT | CTACCGCCTTGCTGCTGCGT | ACGCAGCAGCAAGGCGG    | ACGCACGATTAGGA       |
 
+
+#### Cutadapt format
+
+Read more [here](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying-adapter-sequences).
 
 ### Example inputs
 

@@ -1,7 +1,7 @@
 process bam2wig {
 
     tag "${id}"
-    label 'med_mem'
+    label 'big_cpu'
 
     publishDir( 
         "${params.outputs}/bigwig", 
@@ -31,7 +31,7 @@ process bam2wig {
 process plot_peaks {
 
     tag "${id}"
-    label 'med_mem'
+    label 'big_cpu'
 
     publishDir( 
         "${params.outputs}/coverage", 
@@ -40,7 +40,7 @@ process plot_peaks {
     )
 
     input:
-    tuple val( id ), path( bigwigs ), path( ann_bed )
+    tuple val( id ), path( bigwigs, stageAs: 'dir??/*' ), path( ann_bed )
 
     output:
     tuple val( id ), path( "matrix.mat.gz" ), emit: matrix
@@ -48,15 +48,17 @@ process plot_peaks {
 
     script:
     """
+    export MPLCONFIGDIR=mpltemp
+    mkdir "\$MPLCONFIGDIR"
+
     computeMatrix reference-point \
         --verbose \
-        -S ${bigwigs} \
+        -S dir??/*.bw \
         --regionsFileName "${ann_bed}" \
         --referencePoint TSS \
-        -a 500 \
-        -b 500 \
+        -a 1000 \
+        -b 1000 \
         --binSize 10 \
-        --skipZeros \
         --numberOfProcessors ${task.cpus} \
         -o matrix.mat.gz
 
@@ -64,8 +66,9 @@ process plot_peaks {
         --verbose \
         --matrixFile matrix.mat.gz \
         --dpi 300 \
-        --colorMap magma \
+        --colorMap cividis \
         --refPointLabel "Gene start" \
+        --legendLocation none \
         --outFileName peak-heatmap.png
     
     """

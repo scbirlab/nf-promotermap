@@ -1,7 +1,6 @@
 process fetch_genome_from_NCBI {
 
    tag "${id}"
-   label 'some_mem'
 
    publishDir( 
         "${params.outputs}/genome", 

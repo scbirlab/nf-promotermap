@@ -91,6 +91,7 @@ include {
    annotate_nearest_gene;
    extract_peak_sequences;
    get_peak_coverage;
+   get_per_base_coverage_within_peaks;
    gff2bed;
    make_peak_summary_table;
 } from './modules/bedtools.nf'
@@ -121,10 +122,13 @@ include {
    SAMtools_stats;
    SAMtools_coverage;
    SAMtools_flagstat;
- } from './modules/samtools.nf'
- include { 
+} from './modules/samtools.nf'
+include { 
    trim_using_cutadapt; 
 } from './modules/trimming.nf'
+include { 
+   get_peak_variance; 
+} from './modules/variance.nf'
 
 workflow {
 
@@ -161,6 +165,9 @@ workflow {
                checkIfExists: true
             ).sort()
          ) }
+         .unique()
+         .transpose()
+         .groupTuple( by:0 )
          .set { reads_ch }  // sample_id, [reads]
    }
 
@@ -315,9 +322,10 @@ workflow {
 
    treat_alignments
       .map { tuple( it[1], it[2] ) }  // expt_id, bam_bai
+      .unique()
       .groupTuple( by: 0 )  // expt_id, [bam_bai, ..]
       .combine(
-         ctrl_alignments.map { tuple( it[1], it[-1] ) },  // expt_id, bam_bai_ctrl
+         ctrl_alignments.map { tuple( it[1], it[-1] ) }.unique(),  // expt_id, bam_bai_ctrl
          by: 0,
       )  // expt_id, [bam_bai, ..], bam_bai_ctrl
       .set { expt2bams }
@@ -325,6 +333,7 @@ workflow {
 
    alignments
       .map { tuple( it[1], it[3] ) } // expt_id, bw
+      .unique()
       .groupTuple( by: 0 )  // expt_id, [bw, ..]
       .set { expt2bigwig }
    expt2bigwig
@@ -333,10 +342,16 @@ workflow {
 
    MACS3_all_peaks.out.peaks  // expt_id, bed
       .combine(
-         expt2bams.map { it[0..1] },
+         expt2bams.map { it[0..1] }.unique(),
          by: 0,
       )
-      | get_peak_coverage
+      | (
+         get_peak_coverage
+         & get_per_base_coverage_within_peaks
+      )
+
+   get_peak_coverage.out.tsv
+      | get_peak_variance
    
    MACS3_all_peaks.out.summits  // expt_id, bed
       .combine( 
@@ -349,11 +364,13 @@ workflow {
       .combine( 
          fetch_genome_from_NCBI.out  // genome_acc, genome, gff
             .map { tuple( it[0], it[1] ) }  // genome_acc, genome
+            .unique()
             .combine( 
                genome_ch.map { it[1..0] }, 
                by: 0,
             )  // genome_acc, genome, sample_id
             .map { it[-1..1] }  // sample_id, genome
+            .unique()
             .combine( treat_ch, by: 0 )  // sample_id, genome, expt_id
             .map { it[-1..1] }  // expt_id, genome
             .unique(),
@@ -364,6 +381,10 @@ workflow {
    annotate_nearest_gene.out
       .combine(
          extract_peak_sequences.out.tsv,
+         by: 0,
+      )
+      .combine(
+         get_peak_coverage.out.tsv,
          by: 0,
       )
       | make_peak_summary_table
