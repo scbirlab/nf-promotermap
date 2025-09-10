@@ -165,6 +165,9 @@ workflow {
                checkIfExists: true
             ).sort()
          ) }
+         .unique()
+         .transpose()
+         .groupTuple( by:0 )
          .set { reads_ch }  // sample_id, [reads]
    }
 
@@ -319,9 +322,10 @@ workflow {
 
    treat_alignments
       .map { tuple( it[1], it[2] ) }  // expt_id, bam_bai
+      .unique()
       .groupTuple( by: 0 )  // expt_id, [bam_bai, ..]
       .combine(
-         ctrl_alignments.map { tuple( it[1], it[-1] ) },  // expt_id, bam_bai_ctrl
+         ctrl_alignments.map { tuple( it[1], it[-1] ) }.unique(),  // expt_id, bam_bai_ctrl
          by: 0,
       )  // expt_id, [bam_bai, ..], bam_bai_ctrl
       .set { expt2bams }
@@ -329,6 +333,7 @@ workflow {
 
    alignments
       .map { tuple( it[1], it[3] ) } // expt_id, bw
+      .unique()
       .groupTuple( by: 0 )  // expt_id, [bw, ..]
       .set { expt2bigwig }
    expt2bigwig
@@ -337,7 +342,7 @@ workflow {
 
    MACS3_all_peaks.out.peaks  // expt_id, bed
       .combine(
-         expt2bams.map { it[0..1] },
+         expt2bams.map { it[0..1] }.unique(),
          by: 0,
       )
       | (
@@ -359,11 +364,13 @@ workflow {
       .combine( 
          fetch_genome_from_NCBI.out  // genome_acc, genome, gff
             .map { tuple( it[0], it[1] ) }  // genome_acc, genome
+            .unique()
             .combine( 
                genome_ch.map { it[1..0] }, 
                by: 0,
             )  // genome_acc, genome, sample_id
             .map { it[-1..1] }  // sample_id, genome
+            .unique()
             .combine( treat_ch, by: 0 )  // sample_id, genome, expt_id
             .map { it[-1..1] }  // expt_id, genome
             .unique(),

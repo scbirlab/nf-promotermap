@@ -1,7 +1,7 @@
 process SAMtools_stats {
 
     tag "${id}"
-    label 'med_mem'
+    label 'big_cpu'
 
     publishDir( 
         "${params.outputs}/samtools", 
@@ -49,7 +49,7 @@ process plot_bamstats {
 process SAMtools_flagstat {
 
     tag "${id}"
-    label 'med_mem'
+    label 'big_cpu'
 
     publishDir( 
         "${params.outputs}/samtools", 
@@ -77,7 +77,6 @@ process SAMtools_flagstat {
 process SAMtools_coverage {
 
     tag "${id}"
-    label 'med_mem'
 
     publishDir( 
         "${params.outputs}/samtools", 
@@ -100,7 +99,7 @@ process SAMtools_coverage {
 process sort_and_index_bam {
 
     tag "${id}"
-    label 'med_mem'
+    label 'big_cpu'
 
     publishDir( 
         "${params.outputs}/mapped", 
