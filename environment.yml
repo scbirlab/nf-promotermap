@@ -11,6 +11,7 @@ dependencies:
     - bioconda::bedtools
     - bioconda::bowtie2
     - bioconda::fastqc
+    - bioconda::fastx_toolkit
     - bioconda::macs3
     - bioconda::minimap2
     - bioconda::perl-uri
@@ -23,7 +24,7 @@ dependencies:
     - conda-forge::openssl
     - conda-forge::unzip
     - pip:
-        - 'carabiner-tools[mpl,pd]>=0.0.4'
+        - 'carabiner-tools[mpl,pd]>=0.0.5'
         - 'cutadapt>=5.0'
         - 'deeptools==3.5.6'
         - 'multiqc>=1.27'
